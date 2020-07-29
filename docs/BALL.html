@@ -1,0 +1,262 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset = "UTF-8">
+	<title>공튀기기 게임</title>
+</head>
+<body>
+	<canvas id = "canvas" width = "1000" height = "1000"></canvas>
+	
+	<script>
+	//set canvas drawing
+	let body = document.querySelector("body");
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let score = 0;
+	
+	//basic game setting
+	let circle = function (x, y, radius, fillCircle) {
+		ctx.beginPath();
+		ctx.arc(x, y,radius, 0, Math.PI * 2, false);
+		if(fillCircle) {
+			ctx.fill();
+		} else {
+			ctx.stroke();
+		}
+	};
+	
+	let drawBorder = function () {
+		// border
+		ctx.fillStyle = "Black";
+		ctx.fillRect(0, 0, width, 10);
+		ctx.fillRect(0, height-10, width, 10);
+		ctx.fillRect(0, 0, 10, height);
+		ctx.fillRect(width-10, 0, 10, height);
+		
+		// guide
+		ctx.font = "17px Courier";
+		ctx.fillStyle =  "Gray";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillText("← 왼쪽 이동, → 오른쪽 이동, ↓ 정지, 벽에서 반대 방향키를 이용해 한번 더 점프할 수 있습니다.", width/2, height*0.93);
+		ctx.fillText("빨간 발판을 밟을 시 게임오버되며 한 번 밟은 바닥은 밑으로 떨어집니다.", width/2, height*0.96);
+		ctx.fillText("← 이 발판에 도달하면 성공입니다.", width*0.53, height*0.035);
+	};
+	
+	let gameOver = function () {
+		clearInterval(intervalId);
+		ctx.font = "50px Courier";
+		ctx.fillStyle =  "Black";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillText("Game Over", width/2, height/2);
+		ctx.fillText("F5 to restart", width/2, height*0.6);
+	};
+	
+	let gameClear = function () {
+		clearInterval(intervalId);
+		ctx.font = "50px Courier";
+		ctx.fillStyle =  "Red";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "middle";
+		ctx.fillText("Game Clear", width/2, height/2);
+	};
+	
+	//Player
+	let Player = function (x, y) {
+		this.x = x;
+		this.y = y;
+		this.xSpeed = 0;
+		this.ySpeed = -30;
+		this.direction = "";
+	};
+	
+	Player.prototype.move = function () {
+		// gravity
+		this.ySpeed += 3; 
+		
+		this.y += this.ySpeed;
+		if(this.y < 25){
+			this.ySpeed = 0;
+			this.y = 25;
+		}
+		this.x += this.xSpeed;
+		
+		//wall collision
+		if(this.x < 25) {
+			this.x = 25;
+		}
+		if(this.x > width - 25) {
+			this.x = width - 25;
+		}
+		if(this.y > 1000){
+			gameOver();
+		}
+		
+		for(let i=1 ; i<5 ; i++) {
+			if(player.x >= blocks[i].x-12 && player.x <= blocks[i].x+12 + blocks[i].w
+			&& player.y >= blocks[i].y-18 && player.y <= blocks[i].y+18 + blocks[i].h) {
+				gameOver();
+			}
+		}
+		
+		if(player.x >= blocks[0].x && player.x <= blocks[0].x + blocks[0].w
+		&& player.y >= blocks[0].y && player.y <= blocks[0].y + blocks[0].h) {
+			gameClear();
+		}
+	};
+	
+	Player.prototype.setDirection = function (direction) {
+		if(direction === "left") {
+			if(this.x >= width - 25){
+				this.ySpeed = -30;
+			}
+			for(let i=1 ; i<blocks.length ; i++) {
+				if(hitLeft(i)){
+					this.ySpeed = -30;
+				}
+			}
+			this.xSpeed = -10;
+		} else if (direction === "right") {
+			if(this.x <= 25) {
+				this.ySpeed = -30;
+			}
+			for(let i=1 ; i<blocks.length ; i++) {
+				if(hitRight(i)) {
+					this.ySpeed = -30;
+				}
+			}
+			this.xSpeed = 10;
+		} else {
+			this.xSpeed = 0;
+		}
+	};
+	
+	Player.prototype.draw = function (color) {
+		circle(this.x, this.y, 15, true);
+	};
+	
+	let player = new Player(50, 785);
+
+	//block
+	let Block = function (x, y, w, h) {
+		this.x = x;
+		this.y = y;
+		this.w = w;
+		this.h = h;
+		this.stat = true;
+	};
+	
+	Block.prototype.draw = function () {
+		ctx.fillRect(this.x, this.y, this.w, this.h);
+	};
+	
+	let blocks = [];
+	
+	// draw map
+	
+	blocks.push(new Block(315, 20, 20, 20));
+	
+	blocks.push(new Block(375, 770, 50, 80)); //death block
+	blocks.push(new Block(525, 770, 50, 80)); //death block
+	blocks.push(new Block(675, 770, 50, 80)); //death block
+	blocks.push(new Block(825, 770, 50, 80)); //death block
+	
+	blocks.push(new Block(0, 800, 200, 100));
+	blocks.push(new Block(300, 800, 50, 50));
+	blocks.push(new Block(450, 800, 50, 50));
+	blocks.push(new Block(600, 800, 50, 50));
+	blocks.push(new Block(750, 800, 50, 50));
+	blocks.push(new Block(900, 800, 50, 50));
+	blocks.push(new Block(800, 500, 50, 130));
+	blocks.push(new Block(650, 350, 50, 150));
+	blocks.push(new Block(500, 200, 50, 150));
+	blocks.push(new Block(350, 400, 50, 50));
+	blocks.push(new Block(200, 400, 50, 50));
+	blocks.push(new Block(50, 200, 50, 150));
+	blocks.push(new Block(0, 200, 50, 150));
+	blocks.push(new Block(200, 150, 50, 50));
+	blocks.push(new Block(250, 100, 50, 50));
+	blocks.push(new Block(300, 50, 50, 50));
+	
+	let blockCollision = function () {
+		for(let i=2 ; i<blocks.length ; i++) {
+			if(hitUp(i)) {
+				player.y = blocks[i].y - 15;
+				player.ySpeed = -30;
+				blocks[i].stat = false;
+			}
+			if(hitLeft(i)) {
+				player.xSpeed = 0;
+				player.x = blocks[i].x - 15;
+			}
+			if(hitRight(i)) {
+				player.xSpeed = 0;
+				player.x = blocks[i].x + blocks[i].w + 15;
+			}
+			if(hitDown(i)) {
+				player.y = blocks[i].y + blocks[i].h + 15;
+			}
+		}
+	};
+	
+	let hitUp = function(i) {
+		return (player.x > blocks[i].x-15 && player.x < blocks[i].x + blocks[i].w + 15)
+				&& (player.y >= blocks[i].y-15 && player.y < blocks[i].y-15 + player.ySpeed);
+	};
+	let hitDown = function(i) {
+		return (player.x > blocks[i].x-15 && player.x < blocks[i].x + blocks[i].w + 15)
+				&& (player.y <= blocks[i].y + blocks[i].h + 15 
+				&& player.y >= blocks[i].y + blocks[i].h + 15 + player.ySpeed);
+	};
+	let hitLeft = function(i) {
+		return (player.x >= blocks[i].x-15 && player.x <= blocks[i].x-15 + player.xSpeed)
+				&& (player.y >= blocks[i].y-15 && player.y < blocks[i].y + blocks[i].h + 15);
+	};
+	let hitRight = function(i) {
+		return (player.x <= blocks[i].x + blocks[i].w + 15 && player.x >= blocks[i].x + blocks[i].w + 15 + player.xSpeed)
+				&& (player.y >= blocks[i].y-15 && player.y <= blocks[i].y + blocks[i].h + 15);
+	};
+	
+	//set ket actions
+	let keyActions = {
+		37: "left",
+		39: "right"
+	};
+
+	body.addEventListener("keydown", function(event) {
+		let direction = keyActions[event.keyCode];
+		player.direction = direction;
+		player.setDirection(direction);
+	})
+	
+	
+	//main game function
+	let intervalId = setInterval(function () {
+		ctx.clearRect(0, 0, width, height);
+		player.move();
+		blockCollision();
+		
+		for(let i=0 ; i<blocks.length ; i++) {
+			if(i<1) {
+				ctx.fillStyle = "LimeGreen";
+			} else if(i >= 1 && i < 5) {
+				ctx.fillStyle = "Red";
+			} else {
+				ctx.fillStyle = "Black";
+			}
+			if(blocks[i].stat === false && i > 5 && i < blocks.length-2) {
+				blocks[i].y += 30;
+			}
+			blocks[i].draw();
+		}
+		ctx.fillStyle = "Brown";
+		player.draw();
+		drawBorder();
+		
+	}, 30)
+	</script>
+</body>	
+</html>
